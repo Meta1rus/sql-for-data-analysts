@@ -15,6 +15,9 @@ class PostgresConfig(BaseModel):
             f"{self.user}:{self.password}@{self.host}:{self.port}/{self.dbname}"
         )
 
+    def build_jdbc_url(self) -> str:
+        return f"jdbc:postgresql://{self.host}:{self.port}/{self.dbname}"
+
 
 class ClickhouseConfig(BaseModel):
     host: str
@@ -24,6 +27,11 @@ class ClickhouseConfig(BaseModel):
     database: str = "default"
     secure: bool = False
     connect_timeout: int = 10
+
+    def build_jdbc_url(self, database: str | None = None) -> str:
+        db = database or self.database
+        protocol = "https" if self.secure else "http"
+        return f"jdbc:clickhouse:{protocol}://{self.host}:{self.port}/{db}"
 
 
 class MongoConfig(BaseModel):
@@ -60,3 +68,17 @@ class RedisConfig(BaseModel):
     ssl: bool = False
     socket_timeout: int = 10
     socket_connect_timeout: int = 10
+
+
+class SparkConfig(BaseModel):
+    app_name: str = "dwh-etl-spark"
+    master: str = "local[*]"
+    driver_memory: str = "4g"
+    executor_memory: str = "4g"
+    shuffle_partitions: int = 8
+    packages: list[str] = [
+        "org.postgresql:postgresql:42.7.4",
+        "com.clickhouse:clickhouse-jdbc:0.6.4:all",
+        "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0",
+        "com.redislabs:spark-redis_2.12:3.1.0",
+    ]
