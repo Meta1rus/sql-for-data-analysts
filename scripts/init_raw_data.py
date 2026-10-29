@@ -144,9 +144,85 @@ def init_databases_connections() -> dict[str, Any]:
     }
 
 
-def load_data_to_databases():
-    pass
+def load_data_to_databases(
+    databases_dfs: dict[str, list[pd.DataFrame]],
+    connections: dict[str, Any],
+) -> None:
+    try:
+        # 1. PG main
+        pg_main: PostgresHandler = connections["pg_main"]
+        pg_main_tables = ["products", "shops", "users"]
+        for table_name, df in zip(pg_main_tables, databases_dfs["pg_main"]):
+            logger.info("Loading %s into PG main (%d rows)...", table_name, len(df))
+            pg_main.load_dataframe(df, table_name=table_name, mode="replace")
+
+        # 2. PG ML
+        pg_ml: PostgresHandler = connections["pg_ml"]
+        pg_ml_tables = [
+            "shops_daily_completed_orders_predict",
+            "shops_daily_all_orders_predict",
+            "daily_revenue_predict",
+        ]
+        for table_name, df in zip(pg_ml_tables, databases_dfs["pg_ml"]):
+            logger.info("Loading %s into PG ML (%d rows)...", table_name, len(df))
+            pg_ml.load_dataframe(df, table_name=table_name, mode="replace")
+
+        # 3. ClickHouse
+        ch: ClickHouseHandler = connections["clickhouse"]
+        ch.create_database()
+        ch_specs = [
+            ("interactions", "interaction_id"),
+            ("orders_history", "(order_id, datetime)"),
+            ("products_price_history", "(product_id, effective_from)"),
+            ("delivery_price_history", "(object_type, object_id, effective_from)"),
+        ]
+        for (table_name, order_by), df in zip(ch_specs, databases_dfs["clickhouse"]):
+            logger.info("Loading %s into ClickHouse (%d rows)...", table_name, len(df))
+            ch.create_table_from_dataframe(df, table_name=table_name, order_by=order_by)
+            ch.load_dataframe(df, table_name=table_name, mode="replace")
+
+        # 4. MongoDB
+        mongo: MongoHandler = connections["mongodb"]
+        comp_df = databases_dfs["mongodb"][0]
+        logger.info(
+            "Loading competitors_products_price_history into MongoDB (%d rows)...",
+            len(comp_df),
+        )
+        mongo.load_dataframe(
+            comp_df,
+            collection_name="competitors_products_price_history",
+            mode="replace",
+        )
+
+        # 5. Redis
+        redis_handler: RedisHandler = connections["redis"]
+        redis_handler.flush_database()
+        users_cities_df, users_clusters_df = databases_dfs["redis"]
+        logger.info(
+            "Loading users_cities into Redis (%d keys)...", len(users_cities_df)
+        )
+        redis_handler.load_dataframe_as_hashes(
+            users_cities_df,
+            key_template="users_cities:{user_id}",
+            key_fields=["user_id"],
+            value_fields=["city"],
+        )
+        logger.info(
+            "Loading users_clusters into Redis (%d keys)...", len(users_clusters_df)
+        )
+        redis_handler.load_dataframe_as_hashes(
+            users_clusters_df,
+            key_template="users_clusters:{user_id}",
+            key_fields=["user_id"],
+            value_fields=["price_cluster"],
+        )
+        logger.info("All 13 source tables initialized and loaded successfully.")
+    finally:
+        for handler in connections.values():
+            handler.close()
 
 
 if __name__ == "__main__":
     databases_dfs = init_databases_dataframes()
+    connections = init_databases_connections()
+    load_data_to_databases(databases_dfs, connections)
