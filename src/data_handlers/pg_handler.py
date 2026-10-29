@@ -56,6 +56,10 @@ class PostgresHandler:
         inspector = inspect(self.engine)
         return inspector.has_table(table_name, schema=schema)
 
+    def query_df(self, query: str) -> pd.DataFrame:
+        with self.engine.connect() as connection:
+            return pd.read_sql(text(query), connection)
+
     def truncate_table(self, table_name: str, schema: str = "public") -> None:
         qualified_name = f'"{schema}"."{table_name}"'
 
