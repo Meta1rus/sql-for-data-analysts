@@ -4,12 +4,18 @@ services:
     container_name: postgres_main
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_MAIN_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_MAIN_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_MAIN_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_MAIN_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_MAIN_DB:-postgres}
     ports:
       - "5432:5432"
     volumes:
       - ./data/postgres_main_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - data_stack
 
@@ -18,12 +24,18 @@ services:
     container_name: postgres_ml
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_ML_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_ML_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_ML_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_ML_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_ML_DB:-postgres}
     ports:
       - "5433:5432"
     volumes:
       - ./data/postgres_ml_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - data_stack
 
@@ -32,14 +44,20 @@ services:
     container_name: clickhouse
     restart: unless-stopped
     environment:
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-default}
     ports:
       - "8123:8123"
       - "9000:9000"
     volumes:
       - ./data/clickhouse_data:/var/lib/clickhouse
       - ./data/clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user $${CLICKHOUSE_USER} --password $${CLICKHOUSE_PASSWORD} --query 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - data_stack
 
@@ -48,12 +66,17 @@ services:
     container_name: mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-mongo}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongo}
     ports:
       - "27017:27017"
     volumes:
       - ./data/mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - data_stack
 
@@ -66,11 +89,16 @@ services:
       - --appendonly
       - "yes"
       - --requirepass
-      - ${REDIS_PASSWORD}
+      - ${REDIS_PASSWORD:-redis}
     ports:
       - "6379:6379"
     volumes:
       - ./data/redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - data_stack
 
