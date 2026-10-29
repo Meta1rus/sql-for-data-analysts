@@ -61,6 +61,29 @@ services:
     networks:
       - data_stack
 
+  clickhouse_dwh:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse_dwh
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_DWH_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_DWH_PASSWORD:-clickhouse_dwh}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DWH_DB:-raw_layer}
+    ports:
+      - "8124:8123"
+      - "9001:9000"
+    volumes:
+      - ./data/clickhouse_dwh_data:/var/lib/clickhouse
+      - ./data/clickhouse_dwh_logs:/var/log/clickhouse-server
+      - ./sql/raw_layer/00_init_schemas.sql:/docker-entrypoint-initdb.d/00_init_schemas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user $${CLICKHOUSE_USER} --password $${CLICKHOUSE_PASSWORD} --query 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data_stack
+
   mongodb:
     image: mongo:8
     container_name: mongodb
