@@ -12,3 +12,12 @@ wheels/
 *.ruff_cache
 
 .env
+
+# Runtime database volumes & Airflow logs
+data/*
+!data/products.csv
+airflow/logs/
+airflow/webserver_config.py
+derby.log
+metastore_db/
+spark-warehouse/
