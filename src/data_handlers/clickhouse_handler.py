@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from typing import Any
+from uuid import UUID
 
 import clickhouse_connect
 import pandas as pd
@@ -157,5 +158,8 @@ class ClickHouseHandler:
 
             elif pd.api.types.is_object_dtype(result[column]):
                 result[column] = result[column].where(result[column].notna(), None)
+                result[column] = result[column].map(
+                    lambda v: str(v) if isinstance(v, (UUID, int)) else v
+                )
 
         return result
