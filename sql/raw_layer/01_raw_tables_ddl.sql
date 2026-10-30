@@ -67,12 +67,13 @@ ORDER BY (object_type, object_id, effective_from);
 CREATE TABLE IF NOT EXISTS raw_layer.competitors_products_price_history (
     parse_id String,
     product_id Int64,
+    company_name String,
     datetime DateTime64(6, 'UTC'),
     price Nullable(Float64),
     cost Nullable(Float64),
     value Nullable(Float64)
 ) ENGINE = MergeTree()
-ORDER BY (product_id, datetime, parse_id);
+ORDER BY (product_id, company_name, datetime, parse_id);
 
 CREATE TABLE IF NOT EXISTS raw_layer.shops_daily_completed_orders_predict (
     shop_id String,

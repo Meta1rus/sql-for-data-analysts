@@ -5,6 +5,13 @@ run:
 sync-raw:
 	uv run python -m scripts.sync_raw_layer
 
+build-marts:
+	uv run python -m scripts.build_dwh_layers
+
+pipeline:
+	uv run python -m scripts.sync_raw_layer
+	uv run python -m scripts.build_dwh_layers
+
 down:
 	docker compose -f compose.yaml down
 

@@ -4,7 +4,6 @@ import logging
 import os
 
 from dotenv import load_dotenv
-
 from pyspark.sql import functions as F
 
 from src.data_handlers.config import (
