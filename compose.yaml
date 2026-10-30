@@ -125,6 +125,68 @@ services:
     networks:
       - data_stack
 
+  airflow:
+    image: apache/airflow:2.10.3-python3.12
+    container_name: airflow
+    restart: unless-stopped
+    command: standalone
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      PYTHONPATH: /opt/airflow
+      POSTGRES_MAIN_HOST: postgres_main
+      POSTGRES_MAIN_PORT: "5432"
+      POSTGRES_MAIN_DB: ${POSTGRES_MAIN_DB:-postgres}
+      POSTGRES_MAIN_USER: ${POSTGRES_MAIN_USER:-postgres}
+      POSTGRES_MAIN_PASSWORD: ${POSTGRES_MAIN_PASSWORD:-postgres}
+      POSTGRES_ML_HOST: postgres_ml
+      POSTGRES_ML_PORT: "5432"
+      POSTGRES_ML_DB: ${POSTGRES_ML_DB:-postgres}
+      POSTGRES_ML_USER: ${POSTGRES_ML_USER:-postgres}
+      POSTGRES_ML_PASSWORD: ${POSTGRES_ML_PASSWORD:-postgres}
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-default}
+      CLICKHOUSE_DWH_HOST: clickhouse_dwh
+      CLICKHOUSE_DWH_PORT: "8123"
+      CLICKHOUSE_DWH_USER: ${CLICKHOUSE_DWH_USER:-default}
+      CLICKHOUSE_DWH_PASSWORD: ${CLICKHOUSE_DWH_PASSWORD:-clickhouse_dwh}
+      CLICKHOUSE_DWH_DB: ${CLICKHOUSE_DWH_DB:-raw_layer}
+      MONGO_HOST: mongodb
+      MONGO_PORT: "27017"
+      MONGO_USER: ${MONGO_USER:-mongo}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:-mongo}
+      MONGO_DB: ${MONGO_DB:-shop}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./scripts:/opt/airflow/scripts
+      - ./sql:/opt/airflow/sql
+      - ./airflow/logs:/opt/airflow/logs
+    depends_on:
+      postgres_main:
+        condition: service_healthy
+      postgres_ml:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      clickhouse_dwh:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - data_stack
+
 networks:
   data_stack:
     driver: bridge
